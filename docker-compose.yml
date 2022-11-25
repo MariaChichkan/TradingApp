@@ -1,0 +1,51 @@
+version: "3.8"
+services:
+  frontendapp:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontendapp
+    ports:
+      - 8050:8050
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      PSQL_HOST: ${PSQL_HOST}
+      PSQL_PORT: ${PSQL_PORT}
+      PSQL_USER: ${PSQL_USER}
+      PSQL_PASSWORD: ${PSQL_PASSWORD}
+      PSQL_DB: ${PSQL_DB}
+
+  price_db_updater:
+    build:
+      context: .
+      dockerfile: Dockerfile.price_db_updater
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      PSQL_HOST: ${PSQL_HOST}
+      PSQL_PORT: ${PSQL_PORT}
+      PSQL_USER: ${PSQL_USER}
+      PSQL_PASSWORD: ${PSQL_PASSWORD}
+      PSQL_DB: ${PSQL_DB}
+  price_generator:
+    build:
+      context: .
+      dockerfile: Dockerfile.price_generator
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      PSQL_HOST: ${PSQL_HOST}
+      PSQL_PORT: ${PSQL_PORT}
+      PSQL_USER: ${PSQL_USER}
+      PSQL_PASSWORD: ${PSQL_PASSWORD}
+      PSQL_DB: ${PSQL_DB}
+

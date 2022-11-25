@@ -1,0 +1,7 @@
+FROM python:3.8
+COPY frontendapp frontendapp
+COPY utils utils
+WORKDIR frontendapp
+RUN pip3 install -r requirments.txt
+CMD [ "python3", "main.py"]
+

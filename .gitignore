@@ -1,0 +1,6 @@
+price_db_updater/venv/
+price_generator/venv/
+frontendapp/venv/
+.env
+*.idea/
+*.pyc

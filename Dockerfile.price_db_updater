@@ -1,0 +1,7 @@
+FROM python:3.8
+COPY price_db_updater price_db_updater
+COPY utils utils
+WORKDIR price_db_updater
+RUN pip3 install -r requirments.txt
+CMD [ "python3", "db_updater.py"]
+
