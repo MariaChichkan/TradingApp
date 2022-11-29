@@ -12,14 +12,15 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
-from settings import TRADING_INSTRUMENTS_WITH_NAMES, PSQL_CLIENT, PSQL_DB, REDIS_CLIENT
+from settings import TRADING_INSTRUMENTS_WITH_NAMES, PSQL_CLIENT, PSQL_DB, REDIS_CLIENT, \
+                     REDIS_RETENTION_PERIOD, _logging
 from db_orm import TradingPrices
 
 
 
 psql_url = \
     f"postgresql://{PSQL_CLIENT.USER}:{PSQL_CLIENT.PASSWORD}@" + \
-    f"{PSQL_CLIENT.HOST}{':' + PSQL_CLIENT.PORT if PSQL_CLIENT.PORT else ''}" + \
+    f"{PSQL_CLIENT.HOST}{':' + PSQL_CLIENT.PORT if not PSQL_CLIENT.PORT in ['False', False] else ''}" + \
     f"/{PSQL_DB}"
 
 psql_engine = create_engine(psql_url, echo=True)
@@ -45,10 +46,9 @@ interval = dcc.Interval(
     n_intervals=0)
 app.layout = dbc.Container([my_text, html.Br(), dropdown, button, selected_instruments,  graph, interval, historical_data, up_to_date_data ])
 
+logger = _logging()
 
-
-
-# Load historical data for selected instruments in memory.
+# Load historical data for selected instruments into memory.
 def get_historical_data(selected_instruments, date_from=None, date_to=None):
     if not date_to:
         date_to = datetime.datetime.now() - datetime.timedelta(hours=2) # because of postgresql time settings
@@ -65,23 +65,23 @@ def get_historical_data(selected_instruments, date_from=None, date_to=None):
 
     df_instrument_prices["created_at"] = df_instrument_prices["created_at"].apply(lambda x: x.replace(microsecond=0))
     df_instrument_prices = df_instrument_prices.sort_values(by=["created_at", "instrument_id"])
+    logger.info(f"Got historical data for instruments: {selected_instruments}")
     return df_instrument_prices
-
-
 
 
 def get_latest_prices(instruments=[], prev_time=None):
     current_time = int(datetime.datetime.now().timestamp() * 1000)
     if not prev_time:
-        prev_time = current_time - 300000
+        prev_time = current_time - REDIS_RETENTION_PERIOD * 60000  # Each minute equals 60000 ms
 
     # Get latest prices of selected trading_instruments from redis
-    if len(instruments)>0:
+    if len(instruments) > 0:
         ts = redis.execute_command("TS.MRANGE", prev_time, current_time, 'FILTER',
                                               'type=trading_instruments', f'name=({",".join(instruments)})')
+        logger.info(f"Got latest instrument prices for instruments {instruments} from Redis")
     else:
-        ts = redis.execute_command("TS.MRANGE", prev_time, current_time, 'FILTER',
-                                   'type=trading_instruments')
+        ts = redis.execute_command("TS.MRANGE", prev_time, current_time, 'FILTER', 'type=trading_instruments')
+        logger.info(f"Got latest instrument prices for all instruments from Redis")
 
     df_lst = []
     for timeseries in ts:
