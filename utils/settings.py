@@ -1,17 +1,26 @@
+"""
+Example of code.
+Database credentials and some other private information are stored in .env file.
+Please, contact your system administrator to configure TradingApp project
+Copyright © 2022. All Rights are Reserved by Maria Chichkan
+"""
+
 import os
 import logging
-from pydantic import BaseSettings
 from logging.handlers import RotatingFileHandler
+from pydantic import BaseSettings
 
 
 
 class RedisCredentials(BaseSettings):
+    """Host, Port and Credentials to connect Redis"""
     HOST = os.environ.get("REDIS_HOST")
     PORT = os.environ.get("REDIS_PORT")
     PASSWORD = os.environ.get("REDIS_PASSWORD")
 
 
 class PostgreSQLCredentials(BaseSettings):
+    """Host, Port and Credentials to connect PostgreSQL"""
     HOST = os.environ.get("PSQL_HOST")
     PORT = os.environ.get("PSQL_PORT")
     USER = os.environ.get("PSQL_USER")
@@ -34,6 +43,10 @@ TRADING_INSTRUMENTS = list(TRADING_INSTRUMENTS_WITH_NAMES.keys())
 
 
 def _logging():
+    """
+    This function will create or update logfile and save it
+    to "logs" folder (it will create this folder if not exists).
+    """
     parent_dir = r"%s" % os.path.split(os.getcwd())[0].replace("\\", "/")
     log_dir = "/".join([parent_dir, "logs"])
     project_name = os.path.split(os.getcwd())[1]

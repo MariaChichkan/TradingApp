@@ -1,10 +1,13 @@
+"""
+Example of frontend application with Dash framework
+Copyright © 2022. All Rights are Reserved by Maria Chichkan
+"""
+
 import sys
-
-sys.path.insert(0, "../utils")
-
-import pandas as pd
 import datetime
+import pandas as pd
 import redis
+
 from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker
 
@@ -13,6 +16,8 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
+sys.path.insert(0, "../utils")
+from db_orm import TradingPrices
 from settings import (
     TRADING_INSTRUMENTS_WITH_NAMES,
     PSQL_CLIENT,
@@ -21,18 +26,18 @@ from settings import (
     REDIS_RETENTION_PERIOD,
     _logging,
 )
-from db_orm import TradingPrices
 
-
+# Postgresql client
 psql_url = (
     f"postgresql://{PSQL_CLIENT.USER}:{PSQL_CLIENT.PASSWORD}@"
-    + f"{PSQL_CLIENT.HOST}{':' + PSQL_CLIENT.PORT if not PSQL_CLIENT.PORT in ['False', False] else ''}"
+    + f"{PSQL_CLIENT.HOST}"
+    + f"{':' + PSQL_CLIENT.PORT if not PSQL_CLIENT.PORT in ['False', False] else ''}"
     + f"/{PSQL_DB}"
 )
-
 psql_engine = create_engine(psql_url, echo=True)
-
 Session = sessionmaker(bind=psql_engine)
+
+# Redis client
 redis_url = f"redis://{REDIS_CLIENT.HOST}:{REDIS_CLIENT.PORT}"
 redis = redis.from_url(
     redis_url, password=REDIS_CLIENT.PASSWORD, encoding="utf-8", decode_responses=True
@@ -40,7 +45,7 @@ redis = redis.from_url(
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-
+# Layout elements
 my_text = dcc.Markdown(children="# Trading instruments charts")
 dropdown = dcc.Dropdown(
     TRADING_INSTRUMENTS_WITH_NAMES, multi=True, placeholder="Select an instrument",
@@ -55,6 +60,8 @@ interval = dcc.Interval(
     interval=1 * 1000,  # increment the counter n_intervals every interval milliseconds
     n_intervals=0,
 )
+
+
 app.layout = dbc.Container(
     [
         my_text,
@@ -71,8 +78,9 @@ app.layout = dbc.Container(
 
 logger = _logging()
 
-# Load historical data for selected instruments into memory.
+
 def get_historical_data(selected_instruments, date_from=None, date_to=None):
+    """Get historical data for selected instruments from database."""
     if not date_to:
         date_to = datetime.datetime.now() - datetime.timedelta(
             hours=2
@@ -100,7 +108,10 @@ def get_historical_data(selected_instruments, date_from=None, date_to=None):
     return df_instrument_prices
 
 
-def get_latest_prices(instruments=[], prev_time=None):
+def get_latest_prices(instruments=None, prev_time=None):
+    """Get latest prices of selected or all trading instruments from Redis cache"""
+    if not instruments:
+        instruments = []
     current_time = int(datetime.datetime.now().timestamp() * 1000)
     if not prev_time:
         prev_time = (
@@ -109,7 +120,7 @@ def get_latest_prices(instruments=[], prev_time=None):
 
     # Get latest prices of selected trading_instruments from redis
     if len(instruments) > 0:
-        ts = redis.execute_command(
+        timeseries = redis.execute_command(
             "TS.MRANGE",
             prev_time,
             current_time,
@@ -121,17 +132,17 @@ def get_latest_prices(instruments=[], prev_time=None):
             f"Got latest instrument prices for instruments {instruments} from Redis"
         )
     else:
-        ts = redis.execute_command(
+        timeseries = redis.execute_command(
             "TS.MRANGE", prev_time, current_time, "FILTER", "type=trading_instruments"
         )
-        logger.info(f"Got latest instrument prices for all instruments from Redis")
+        logger.info("Got latest instrument prices for all instruments from Redis")
 
-    df_lst = []
-    for timeseries in ts:
-        df = pd.DataFrame(timeseries[2], columns=["created_at", "price"])
-        df["instrument_id"] = timeseries[0]
-        df_lst.append(df)
-    df_latest_prices = pd.concat(df_lst, ignore_index=True)
+    ts_lst = []
+    for timeseries_ in timeseries:
+        df_ts = pd.DataFrame(timeseries_[2], columns=["created_at", "price"])
+        df_ts["instrument_id"] = timeseries_[0]
+        ts_lst.append(df_ts)
+    df_latest_prices = pd.concat(ts_lst, ignore_index=True)
     df_latest_prices["price"] = df_latest_prices["price"].astype("int")
     df_latest_prices["created_at"] = pd.to_datetime(
         df_latest_prices["created_at"], unit="ms"
@@ -150,6 +161,9 @@ def get_latest_prices(instruments=[], prev_time=None):
     prevent_initial_call=True,
 )
 def get_data(dropdown, button):
+    """
+    Get historical and latest data for selected trading instruments
+    """
     prev_time = None
     selected_instruments = dropdown.copy()
     df_instrument_prices = get_historical_data(selected_instruments)
@@ -180,12 +194,13 @@ def get_data(dropdown, button):
     prevent_initial_call=True,
 )
 def update_prices(n_intervals, historical_data, up_to_date_data, selected_instruments):
+    """This function redraw the price chart with trading instruments every second"""
     if (
         n_intervals == 0 or selected_instruments == [] or historical_data == {}
     ):  # at the beginning
         raise PreventUpdate
     current_instruments = set(data["instrument_id"] for data in up_to_date_data)
-    # user selected another set of instruments and we need to get historical data for them
+    # If the user selected another set of instruments  we need to get historical data for them
     if current_instruments != set(selected_instruments):
         up_to_date_data = historical_data.copy()
 
