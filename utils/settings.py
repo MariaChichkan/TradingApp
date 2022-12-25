@@ -25,15 +25,19 @@ PSQL_CLIENT = PostgreSQLCredentials()
 PSQL_DB = os.environ.get("PSQL_DB")
 
 # In future the best approach will be to move this information to the database table
-TRADING_INSTRUMENTS_WITH_NAMES = {"ticker_999": "Tesla", "ticker_998": "Gold", "ticker_997": "Apple"}
+TRADING_INSTRUMENTS_WITH_NAMES = {
+    "ticker_999": "Tesla",
+    "ticker_998": "Gold",
+    "ticker_997": "Apple",
+}
 TRADING_INSTRUMENTS = list(TRADING_INSTRUMENTS_WITH_NAMES.keys())
 
 
 def _logging():
-    parent_dir = r'%s' % os.path.split(os.getcwd())[0].replace('\\', '/')
+    parent_dir = r"%s" % os.path.split(os.getcwd())[0].replace("\\", "/")
     log_dir = "/".join([parent_dir, "logs"])
     project_name = os.path.split(os.getcwd())[1]
-    filename = f'{log_dir}/{project_name}.log'
+    filename = f"{log_dir}/{project_name}.log"
 
     # Create folder for all logs if not exists
     if not os.path.isdir(log_dir):
@@ -45,13 +49,20 @@ def _logging():
     if not logger.handlers:
         # Create handler to write logs to file
         # RotatingFileHandler controls maximum file size and keeps only the last logs
-        logger_handler = RotatingFileHandler(filename, maxBytes=50 * 1024 * 1024,
-                                      backupCount=2, encoding=None, delay=False)
+        logger_handler = RotatingFileHandler(
+            filename,
+            maxBytes=50 * 1024 * 1024,
+            backupCount=2,
+            encoding=None,
+            delay=False,
+        )
         # logger_handler = logging.FileHandler(filename)
         logger_handler.setLevel(logging.INFO)
         # Create Formatter to format messages in log
-        logger_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        logger_formatter.datefmt = '%Y-%m-%d %H:%M:%S'
+        logger_formatter = logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s"
+        )
+        logger_formatter.datefmt = "%Y-%m-%d %H:%M:%S"
         # Add Formatter to handler
         logger_handler.setFormatter(logger_formatter)
         # Add handler to Logger
