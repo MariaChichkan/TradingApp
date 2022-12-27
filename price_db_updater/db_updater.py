@@ -115,14 +115,12 @@ class DBUpdater:
 
 
 def main():
-    db_updater = DBUpdater()
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(db_updater.update_trading_prices())
     try:
-        loop.run_forever()
+        db_updater = DBUpdater()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(db_updater.update_trading_prices())
     except KeyboardInterrupt:
-        pass
-    loop.close()
+        loop.close()
 
 
 if __name__ == "__main__":

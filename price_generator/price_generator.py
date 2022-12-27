@@ -109,9 +109,7 @@ async def main():
     await price_generator.subscribe()
     tasks = []
     for instrument in TRADING_INSTRUMENTS:
-        tasks.append(
-            asyncio.create_task(price_generator.generate_trading_price(instrument))
-        )
+        tasks.append(price_generator.generate_trading_price(instrument))
     await asyncio.gather(*tasks, return_exceptions=True)
 
 
